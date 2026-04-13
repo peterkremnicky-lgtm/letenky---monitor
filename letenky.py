@@ -28,13 +28,12 @@ def get_ryanair_prices(origin, destination, days=14):
     for i in range(days):
         d = today + timedelta(days=i)
         months.add(d.strftime("%Y-%m-01"))
-
     fares = {}
     for month in months:
         url = (
-            f"https://www.ryanair.com/api/farfnd/v4/oneWayFares"
-            f"/{origin}/{destination}/cheapestPerDay"
-            f"?outboundMonthOfDate={month}&currency=EUR"
+            "https://www.ryanair.com/api/farfnd/v4/oneWayFares"
+            "/" + origin + "/" + destination + "/cheapestPerDay"
+            "?outboundMonthOfDate=" + month + "&currency=EUR"
         )
         try:
             r = requests.get(url, headers=HEADERS_RYANAIR, timeout=15)
@@ -45,8 +44,7 @@ def get_ryanair_prices(origin, destination, days=14):
                 if date and price_obj and price_obj.get("value") is not None:
                     fares[date] = price_obj["value"]
         except Exception as e:
-            print(f"Ryanair chyba {origin}->{destination}: {e}")
-
+            print("Ryanair chyba: " + str(e))
     for i in range(days):
         d = today + timedelta(days=i)
         key = d.strftime("%Y-%m-%d")
@@ -58,7 +56,6 @@ def get_wizzair_prices(origin, destination, days=14):
     results = []
     today = datetime.today()
     fares = {}
-
     for i in range(days):
         d = today + timedelta(days=i)
         date_str = d.strftime("%Y-%m-%d")
@@ -87,8 +84,7 @@ def get_wizzair_prices(origin, destination, days=14):
                 if prices:
                     fares[date_str] = min(p for p in prices if p)
         except Exception as e:
-            print(f"Wizz Air chyba {origin}->{destination} {date_str}: {e}")
-
+            print("Wizz Air chyba: " + str(e))
     for i in range(days):
         d = today + timedelta(days=i)
         key = d.strftime("%Y-%m-%d")
@@ -97,7 +93,7 @@ def get_wizzair_prices(origin, destination, days=14):
     return results
 
 def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage"
     requests.post(url, data={"chat_id": CHAT_ID, "text": message, "parse_mode": "HTML"})
 
 def main():
@@ -113,41 +109,85 @@ def main():
     msg += "🛫 <b>Bratislava → Trapani (Ryanair)</b>\n"
     if bts_tps:
         for date, price in bts_tps:
-            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
-            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
     else:
         msg += "Žiadne lety nenájdené\n"
 
     msg += "\n🔄 <b>Trapani → Bratislava (Ryanair)</b>\n"
     if tps_bts:
         for date, price in tps_bts:
-            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
-            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
     else:
         msg += "Žiadne lety nenájdené\n"
 
     msg += "\n✈️ <b>Bratislava → Palermo (Ryanair)</b>\n"
     if bts_pmo_ry:
         for date, price in bts_pmo_ry:
-            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
-            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
     else:
         msg += "Žiadne lety nenájdené\n"
 
     msg += "\n🔄 <b>Palermo → Bratislava (Ryanair)</b>\n"
     if pmo_bts_ry:
         for date, price in pmo_bts_ry:
-            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
-            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
     else:
         msg += "Žiadne lety nenájdené\n"
 
     msg += "\n✈️ <b>Bratislava → Palermo (Wizz Air)</b>\n"
     if bts_pmo_wz:
         for date, price in bts_pmo_wz:
-            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
-            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
     else:
         msg += "Žiadne lety nenájdené\n"
 
-    msg +=
+    msg += "\n🔄 <b>Palermo → Bratislava (Wizz Air)</b>\n"
+    if pmo_bts_wz:
+        for date, price in pmo_bts_wz:
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
+    else:
+        msg += "Žiadne lety nenájdené\n"
+
+    msg += "\n🟢 do 30€  🟡 do 60€  🔴 60€+"
+
+    send_telegram(msg)
+    print("Odoslane!")
+
+if __name__ == "__main__":
+    main()
