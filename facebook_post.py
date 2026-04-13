@@ -7,7 +7,10 @@ FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN")
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_GROUP_ID = os.environ.get("FB_GROUP_ID")
 UNSPLASH_KEY = os.environ.get("UNSPLASH_KEY")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
 KIWI_LINK = "https://kiwi.tpx.gr/41mqIeVX"
+FB_PAGE_NAME = "Kedykam"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -125,9 +128,20 @@ def post_to_facebook_with_photo(target_id, message, photo_url, token):
                 "access_token": token
             }
         r = requests.post(url, data=data)
-        print("Facebook " + target_id + ": " + r.text)
+        result = r.json()
+        print("Facebook " + target_id + ": " + str(result))
+        return result.get("id") or result.get("post_id")
     except Exception as e:
         print("Facebook chyba: " + str(e))
+        return None
+
+def send_telegram(message):
+    url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage"
+    requests.post(url, data={
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    })
 
 def main():
     all_flights = []
@@ -168,8 +182,18 @@ def main():
     msg += "\n👉 Rezervuj tu: " + KIWI_LINK
     msg += "\n\n#letenky #cestovanie #výlety #lacnéletenky #Bratislava #reklama"
 
-    post_to_facebook_with_photo(FB_PAGE_ID, msg, photo_url, FB_PAGE_TOKEN)
-    post_to_facebook_with_photo(FB_GROUP_ID, msg, photo_url, FB_PAGE_TOKEN)
+    post_id = post_to_facebook_with_photo(FB_PAGE_ID, msg, photo_url, FB_PAGE_TOKEN)
+
+    fb_post_link = "https://www.facebook.com/" + FB_PAGE_ID
+    if post_id:
+        fb_post_link = "https://www.facebook.com/" + str(post_id).replace("_", "/posts/")
+
+    telegram_notif = "✅ <b>Post zverejnený na Kedykam!</b>\n\n"
+    telegram_notif += "📱 Zdieľaj do skupiny ako stránka Kedykam:\n"
+    telegram_notif += "👉 " + fb_post_link + "\n\n"
+    telegram_notif += "⏱️ Trvá to 10 sekúnd!"
+
+    send_telegram(telegram_notif)
     print("Hotovo!")
 
 if __name__ == "__main__":
