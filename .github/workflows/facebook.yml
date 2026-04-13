@@ -2,7 +2,7 @@ name: Facebook Post
 
 on:
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '0 8 * * 1,3,5'
   workflow_dispatch:
 
 jobs:
@@ -18,3 +18,7 @@ jobs:
         env:
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_GROUP_ID: ${{ secrets.FB_GROUP_ID }}
+          UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
