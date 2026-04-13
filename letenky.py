@@ -31,8 +31,6 @@ def get_ryanair_prices(origin, destination, days=14):
         )
         try:
             r = requests.get(url, headers=HEADERS, timeout=15)
-            print(f"Status {origin}->{destination}: {r.status_code}")
-            print(f"Response: {r.text[:300]}")
             data = r.json()
             for item in data.get("outbound", {}).get("fares", []):
                 date = item.get("day")
@@ -57,6 +55,8 @@ def send_telegram(message):
 def main():
     bts_tps = get_ryanair_prices("BTS", "TPS")
     tps_bts = get_ryanair_prices("TPS", "BTS")
+    bts_pmo = get_ryanair_prices("BTS", "PMO")
+    pmo_bts = get_ryanair_prices("PMO", "BTS")
 
     msg = "✈️ <b>LETENKY — najbližších 14 dní</b>\n\n"
 
@@ -71,6 +71,22 @@ def main():
     msg += "\n🔄 <b>Trapani → Bratislava</b>\n"
     if tps_bts:
         for date, price in tps_bts:
+            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
+            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+    else:
+        msg += "Žiadne lety nenájdené\n"
+
+    msg += "\n✈️ <b>Bratislava → Palermo</b>\n"
+    if bts_pmo:
+        for date, price in bts_pmo:
+            emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
+            msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
+    else:
+        msg += "Žiadne lety nenájdené\n"
+
+    msg += "\n🔄 <b>Palermo → Bratislava</b>\n"
+    if pmo_bts:
+        for date, price in pmo_bts:
             emoji = "🟢" if price < 30 else "🟡" if price < 60 else "🔴"
             msg += f"{emoji} {date} — <b>{price:.0f} €</b>\n"
     else:
