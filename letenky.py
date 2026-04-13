@@ -67,6 +67,9 @@ def main():
         msg += "Žiadne lety nenájdené\n"
     
     msg += "\n🟢 do 30€  🟡 do 60€  🔴 60€+"
+    
+    send_telegram(msg)
+    print("Odoslané!")
 
 if __name__ == "__main__":
     main()
