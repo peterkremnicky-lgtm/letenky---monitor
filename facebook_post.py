@@ -17,19 +17,29 @@ HEADERS = {
 DESTINATIONS = {
     "TPS": "Trapani 🇮🇹",
     "PMO": "Palermo 🇮🇹",
-    "BCN": "Barcelona 🇪🇸",
-    "LTN": "Londýn 🇬🇧",
-    "DUB": "Dublin 🇮🇪",
-    "ATH": "Atény 🇬🇷",
-    "MLA": "Malta 🇲🇹",
-    "EDI": "Edinburgh 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "NAP": "Neapol 🇮🇹",
     "CIA": "Rím 🇮🇹",
     "BGY": "Miláno 🇮🇹",
-    "EIN": "Eindhoven 🇳🇱",
-    "CRL": "Brusel 🇧🇪",
+    "BRI": "Bari 🇮🇹",
+    "PSA": "Pisa 🇮🇹",
+    "LME": "Lamezia Terme 🇮🇹",
+    "BCN": "Barcelona 🇪🇸",
     "ALC": "Alicante 🇪🇸",
     "AGP": "Malaga 🇪🇸",
-    "NAP": "Neapol 🇮🇹"
+    "ACE": "Lanzarote 🇪🇸",
+    "STN": "Londýn 🇬🇧",
+    "MAN": "Manchester 🇬🇧",
+    "EDI": "Edinburgh 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "DUB": "Dublin 🇮🇪",
+    "ATH": "Atény 🇬🇷",
+    "SKG": "Thessaloniki 🇬🇷",
+    "MLA": "Malta 🇲🇹",
+    "EIN": "Eindhoven 🇳🇱",
+    "CRL": "Brusel 🇧🇪",
+    "DLM": "Dalaman 🇹🇷",
+    "TSF": "Benátky 🇮🇹",
+    "PRG": "Praha 🇨🇿",
+    "WAW": "Varšava 🇵🇱"
 }
 
 def get_ryanair_prices(origin, destination, days=14):
@@ -55,7 +65,7 @@ def get_ryanair_prices(origin, destination, days=14):
                 if date and price_obj and price_obj.get("value") is not None:
                     fares[date] = price_obj["value"]
         except Exception as e:
-            print("Chyba: " + str(e))
+            print("Chyba " + destination + ": " + str(e))
     for i in range(days):
         d = today + timedelta(days=i)
         key = d.strftime("%Y-%m-%d")
@@ -80,7 +90,16 @@ def main():
             all_flights.append((date, price, name))
 
     all_flights.sort(key=lambda x: x[1])
-    top10 = [f for f in all_flights if f[1] <= 30][:10]
+
+    top10 = []
+    seen_dates = {}
+    for date, price, dest in all_flights:
+        if dest not in seen_dates:
+            seen_dates[dest] = True
+            top10.append((date, price, dest))
+        if len(top10) >= 10:
+            break
+
     if not top10:
         top10 = all_flights[:10]
 
