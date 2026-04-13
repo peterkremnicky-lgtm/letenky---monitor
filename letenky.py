@@ -5,20 +5,12 @@ import os
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
-HEADERS_RYANAIR = {
+HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "application/json",
     "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://www.ryanair.com/",
     "Origin": "https://www.ryanair.com"
-}
-
-HEADERS_WIZZAIR = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-    "Referer": "https://wizzair.com/",
-    "Origin": "https://wizzair.com"
 }
 
 def get_ryanair_prices(origin, destination, days=14):
@@ -36,7 +28,7 @@ def get_ryanair_prices(origin, destination, days=14):
             "?outboundMonthOfDate=" + month + "&currency=EUR"
         )
         try:
-            r = requests.get(url, headers=HEADERS_RYANAIR, timeout=15)
+            r = requests.get(url, headers=HEADERS, timeout=15)
             data = r.json()
             for item in data.get("outbound", {}).get("fares", []):
                 date = item.get("day")
@@ -52,138 +44,93 @@ def get_ryanair_prices(origin, destination, days=14):
             results.append((d.strftime("%d.%m"), fares[key]))
     return results
 
-def get_wizzair_prices(origin, destination, days=14):
+def get_kiwi_prices(origin, destination, days=14):
     results = []
     today = datetime.today()
+    date_from = today.strftime("%d/%m/%Y")
+    date_to = (today + timedelta(days=days)).strftime("%d/%m/%Y")
+    url = "https://api.tequila.kiwi.com/v2/search"
+    headers = {
+        "apikey": "public",
+        "Accept": "application/json"
+    }
+    params = {
+        "fly_from": origin,
+        "fly_to": destination,
+        "date_from": date_from,
+        "date_to": date_to,
+        "adults": 1,
+        "limit": 50,
+        "curr": "EUR",
+        "one_for_city": 1,
+        "sort": "price"
+    }
     fares = {}
-    for i in range(days):
-        d = today + timedelta(days=i)
-        date_str = d.strftime("%Y-%m-%d")
-        url = "https://be.wizzair.com/24.4.0/Api/search/search"
-        payload = {
-            "isFlightChange": False,
-            "isSeniorOrStudent": False,
-            "flightList": [
-                {
-                    "departureStation": origin,
-                    "arrivalStation": destination,
-                    "date": date_str
-                }
-            ],
-            "adultCount": 1,
-            "childCount": 0,
-            "infantCount": 0,
-            "wdc": False
-        }
-        try:
-            r = requests.post(url, json=payload, headers=HEADERS_WIZZAIR, timeout=15)
-            data = r.json()
-            flights = data.get("outboundFlights", [])
-            if flights:
-                prices = [f.get("price", {}).get("amount") for f in flights if f.get("price")]
-                if prices:
-                    fares[date_str] = min(p for p in prices if p)
-        except Exception as e:
-            print("Wizz Air chyba: " + str(e))
+    try:
+        r = requests.get(url, headers=headers, params=params, timeout=15)
+        data = r.json()
+        for flight in data.get("data", []):
+            dep_time = flight.get("dTime")
+            price = flight.get("price")
+            airline = flight.get("airlines", ["?"])[0]
+            if dep_time and price:
+                d = datetime.fromtimestamp(dep_time)
+                key = d.strftime("%Y-%m-%d")
+                label = d.strftime("%d.%m")
+                if key not in fares or price < fares[key][0]:
+                    fares[key] = (price, airline)
+    except Exception as e:
+        print("Kiwi chyba: " + str(e))
+
     for i in range(days):
         d = today + timedelta(days=i)
         key = d.strftime("%Y-%m-%d")
         if key in fares:
-            results.append((d.strftime("%d.%m"), fares[key]))
+            price, airline = fares[key]
+            results.append((d.strftime("%d.%m"), price, airline))
     return results
 
 def send_telegram(message):
     url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage"
     requests.post(url, data={"chat_id": CHAT_ID, "text": message, "parse_mode": "HTML"})
 
+def format_section(title, flights, use_airline=False):
+    msg = title + "\n"
+    if flights:
+        for item in flights:
+            if use_airline:
+                date, price, airline = item
+            else:
+                date, price = item
+                airline = ""
+            if price < 30:
+                emoji = "🟢"
+            elif price < 60:
+                emoji = "🟡"
+            else:
+                emoji = "🔴"
+            line = emoji + " " + date + " — <b>" + str(int(price)) + " €</b>"
+            if use_airline:
+                line += " (" + airline + ")"
+            msg += line + "\n"
+    else:
+        msg += "Žiadne lety nenájdené\n"
+    return msg
+
 def main():
     bts_tps = get_ryanair_prices("BTS", "TPS")
     tps_bts = get_ryanair_prices("TPS", "BTS")
-    bts_pmo_ry = get_ryanair_prices("BTS", "PMO")
-    pmo_bts_ry = get_ryanair_prices("PMO", "BTS")
-    bts_pmo_wz = get_wizzair_prices("BTS", "PMO")
-    pmo_bts_wz = get_wizzair_prices("PMO", "BTS")
+    bts_pmo = get_kiwi_prices("BTS", "PMO")
+    pmo_bts = get_kiwi_prices("PMO", "BTS")
 
     msg = "✈️ <b>LETENKY — najbližších 14 dní</b>\n\n"
-
-    msg += "🛫 <b>Bratislava → Trapani (Ryanair)</b>\n"
-    if bts_tps:
-        for date, price in bts_tps:
-            if price < 30:
-                emoji = "🟢"
-            elif price < 60:
-                emoji = "🟡"
-            else:
-                emoji = "🔴"
-            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
-    else:
-        msg += "Žiadne lety nenájdené\n"
-
-    msg += "\n🔄 <b>Trapani → Bratislava (Ryanair)</b>\n"
-    if tps_bts:
-        for date, price in tps_bts:
-            if price < 30:
-                emoji = "🟢"
-            elif price < 60:
-                emoji = "🟡"
-            else:
-                emoji = "🔴"
-            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
-    else:
-        msg += "Žiadne lety nenájdené\n"
-
-    msg += "\n✈️ <b>Bratislava → Palermo (Ryanair)</b>\n"
-    if bts_pmo_ry:
-        for date, price in bts_pmo_ry:
-            if price < 30:
-                emoji = "🟢"
-            elif price < 60:
-                emoji = "🟡"
-            else:
-                emoji = "🔴"
-            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
-    else:
-        msg += "Žiadne lety nenájdené\n"
-
-    msg += "\n🔄 <b>Palermo → Bratislava (Ryanair)</b>\n"
-    if pmo_bts_ry:
-        for date, price in pmo_bts_ry:
-            if price < 30:
-                emoji = "🟢"
-            elif price < 60:
-                emoji = "🟡"
-            else:
-                emoji = "🔴"
-            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
-    else:
-        msg += "Žiadne lety nenájdené\n"
-
-    msg += "\n✈️ <b>Bratislava → Palermo (Wizz Air)</b>\n"
-    if bts_pmo_wz:
-        for date, price in bts_pmo_wz:
-            if price < 30:
-                emoji = "🟢"
-            elif price < 60:
-                emoji = "🟡"
-            else:
-                emoji = "🔴"
-            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
-    else:
-        msg += "Žiadne lety nenájdené\n"
-
-    msg += "\n🔄 <b>Palermo → Bratislava (Wizz Air)</b>\n"
-    if pmo_bts_wz:
-        for date, price in pmo_bts_wz:
-            if price < 30:
-                emoji = "🟢"
-            elif price < 60:
-                emoji = "🟡"
-            else:
-                emoji = "🔴"
-            msg += emoji + " " + date + " — <b>" + str(int(price)) + " €</b>\n"
-    else:
-        msg += "Žiadne lety nenájdené\n"
-
+    msg += format_section("🛫 <b>Bratislava → Trapani (Ryanair)</b>", bts_tps)
+    msg += "\n"
+    msg += format_section("🔄 <b>Trapani → Bratislava (Ryanair)</b>", tps_bts)
+    msg += "\n"
+    msg += format_section("🛫 <b>Bratislava → Palermo (všetky aerolinky)</b>", bts_pmo, use_airline=True)
+    msg += "\n"
+    msg += format_section("🔄 <b>Palermo → Bratislava (všetky aerolinky)</b>", pmo_bts, use_airline=True)
     msg += "\n🟢 do 30€  🟡 do 60€  🔴 60€+"
 
     send_telegram(msg)
