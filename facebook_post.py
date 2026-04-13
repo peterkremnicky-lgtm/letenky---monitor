@@ -92,10 +92,10 @@ def main():
     all_flights.sort(key=lambda x: x[1])
 
     top10 = []
-    seen_dates = {}
+    seen_dest = {}
     for date, price, dest in all_flights:
-        if dest not in seen_dates:
-            seen_dates[dest] = True
+        if dest not in seen_dest:
+            seen_dest[dest] = True
             top10.append((date, price, dest))
         if len(top10) >= 10:
             break
