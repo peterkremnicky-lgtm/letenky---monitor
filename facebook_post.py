@@ -1,9 +1,12 @@
 import requests
 from datetime import datetime, timedelta
 import os
+import random
 
 FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN")
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
+FB_GROUP_ID = os.environ.get("FB_GROUP_ID")
+UNSPLASH_KEY = os.environ.get("UNSPLASH_KEY")
 KIWI_LINK = "https://kiwi.tpx.gr/41mqIeVX"
 
 HEADERS = {
@@ -14,32 +17,50 @@ HEADERS = {
     "Origin": "https://www.ryanair.com"
 }
 
+MOTIVACIE = [
+    "😴 Unavený z práce? Možno je čas na malý útek... Pozri čo sme našli pre teba!",
+    "☀️ Slnko, more, pohoda... a letenka za pár eur. Čo viac potrebuješ?",
+    "🌍 Život je krátky. Cestuj viac, ľutuj menej!",
+    "💼 Pondelok ťa dobíja? Naplánuj si niečo na čo sa tešiť!",
+    "🏖️ Predstav si: teplý piesok, modré more, žiadne starosti...",
+    "🎒 Najlepšia investícia? Zážitky, nie veci. Tu sú dnešné ponuky!",
+    "✈️ Niekedy stačí jeden impulz a dovolenka je naplánovaná!",
+    "🌅 Nový výhľad mení perspektívu. Kedy si naposledy cestoval?",
+    "🍕 Pravá talianska pizza, španielske tapas alebo írske pivo? Vyber si!",
+    "💆 Relax nie je luxus — je to nevyhnutnosť. A my ti ho pomôžeme zorganizovať!",
+    "🗺️ Každá cesta začína jedným krokom... alebo jedným kliknutím!",
+    "🌞 Pretože šedý pondelok vyzerá lepšie s výhľadom na cestu vpred!",
+    "🎉 Najlacnejšie letenky dnes ráno — vyber si destináciu snov!",
+    "🧳 Balíček je vždy pripravený. Čaká len na lístok!",
+    "💛 Investuj do spomienok — vráti sa ti to s úrokmi!"
+]
+
 DESTINATIONS = {
-    "TPS": "Trapani 🇮🇹",
-    "PMO": "Palermo 🇮🇹",
-    "NAP": "Neapol 🇮🇹",
-    "CIA": "Rím 🇮🇹",
-    "BGY": "Miláno 🇮🇹",
-    "BRI": "Bari 🇮🇹",
-    "PSA": "Pisa 🇮🇹",
-    "LME": "Lamezia Terme 🇮🇹",
-    "BCN": "Barcelona 🇪🇸",
-    "ALC": "Alicante 🇪🇸",
-    "AGP": "Malaga 🇪🇸",
-    "ACE": "Lanzarote 🇪🇸",
-    "STN": "Londýn 🇬🇧",
-    "MAN": "Manchester 🇬🇧",
-    "EDI": "Edinburgh 🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-    "DUB": "Dublin 🇮🇪",
-    "ATH": "Atény 🇬🇷",
-    "SKG": "Thessaloniki 🇬🇷",
-    "MLA": "Malta 🇲🇹",
-    "EIN": "Eindhoven 🇳🇱",
-    "CRL": "Brusel 🇧🇪",
-    "DLM": "Dalaman 🇹🇷",
-    "TSF": "Benátky 🇮🇹",
-    "PRG": "Praha 🇨🇿",
-    "WAW": "Varšava 🇵🇱"
+    "TPS": ("Trapani 🇮🇹", "Trapani Sicily beach"),
+    "PMO": ("Palermo 🇮🇹", "Palermo Sicily"),
+    "NAP": ("Neapol 🇮🇹", "Naples Italy Vesuvius"),
+    "CIA": ("Rím 🇮🇹", "Rome Colosseum"),
+    "BGY": ("Miláno 🇮🇹", "Milan Italy cathedral"),
+    "BRI": ("Bari 🇮🇹", "Bari Italy old town"),
+    "PSA": ("Pisa 🇮🇹", "Pisa leaning tower"),
+    "LME": ("Lamezia Terme 🇮🇹", "Calabria Italy beach"),
+    "BCN": ("Barcelona 🇪🇸", "Barcelona Sagrada Familia"),
+    "ALC": ("Alicante 🇪🇸", "Alicante Spain beach"),
+    "AGP": ("Malaga 🇪🇸", "Malaga Spain beach"),
+    "ACE": ("Lanzarote 🇪🇸", "Lanzarote volcanic beach"),
+    "STN": ("Londýn 🇬🇧", "London Big Ben"),
+    "MAN": ("Manchester 🇬🇧", "Manchester England"),
+    "EDI": ("Edinburgh 🏴󠁧󠁢󠁳󠁣󠁴󠁿", "Edinburgh castle Scotland"),
+    "DUB": ("Dublin 🇮🇪", "Dublin Ireland"),
+    "ATH": ("Atény 🇬🇷", "Athens Acropolis"),
+    "SKG": ("Thessaloniki 🇬🇷", "Thessaloniki Greece"),
+    "MLA": ("Malta 🇲🇹", "Malta sea blue"),
+    "EIN": ("Eindhoven 🇳🇱", "Eindhoven Netherlands"),
+    "CRL": ("Brusel 🇧🇪", "Brussels Belgium"),
+    "DLM": ("Dalaman 🇹🇷", "Dalaman Turkey beach"),
+    "TSF": ("Benátky 🇮🇹", "Venice Italy canals"),
+    "PRG": ("Praha 🇨🇿", "Prague castle"),
+    "WAW": ("Varšava 🇵🇱", "Warsaw Poland")
 }
 
 def get_ryanair_prices(origin, destination, days=14):
@@ -73,49 +94,82 @@ def get_ryanair_prices(origin, destination, days=14):
             results.append((d.strftime("%d.%m"), fares[key], destination))
     return results
 
-def post_to_facebook(message):
-    url = "https://graph.facebook.com/v19.0/" + FB_PAGE_ID + "/feed"
-    data = {
-        "message": message,
-        "access_token": FB_PAGE_TOKEN
-    }
-    r = requests.post(url, data=data)
-    print("Facebook: " + r.text)
+def get_unsplash_photo(query):
+    try:
+        url = "https://api.unsplash.com/photos/random"
+        params = {
+            "query": query,
+            "orientation": "landscape",
+            "client_id": UNSPLASH_KEY
+        }
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+        return data.get("urls", {}).get("regular")
+    except Exception as e:
+        print("Unsplash chyba: " + str(e))
+        return None
+
+def post_to_facebook_with_photo(target_id, message, photo_url, token):
+    try:
+        if photo_url:
+            url = "https://graph.facebook.com/v19.0/" + target_id + "/photos"
+            data = {
+                "url": photo_url,
+                "caption": message,
+                "access_token": token
+            }
+        else:
+            url = "https://graph.facebook.com/v19.0/" + target_id + "/feed"
+            data = {
+                "message": message,
+                "access_token": token
+            }
+        r = requests.post(url, data=data)
+        print("Facebook " + target_id + ": " + r.text)
+    except Exception as e:
+        print("Facebook chyba: " + str(e))
 
 def main():
     all_flights = []
-    for iata, name in DESTINATIONS.items():
+    for iata, (name, _) in DESTINATIONS.items():
         flights = get_ryanair_prices("BTS", iata)
         for date, price, dest in flights:
-            all_flights.append((date, price, name))
+            all_flights.append((date, price, name, iata))
 
     all_flights.sort(key=lambda x: x[1])
 
     top10 = []
     seen_dest = {}
-    for date, price, dest in all_flights:
-        if dest not in seen_dest:
-            seen_dest[dest] = True
-            top10.append((date, price, dest))
+    for date, price, name, iata in all_flights:
+        if name not in seen_dest:
+            seen_dest[name] = True
+            top10.append((date, price, name, iata))
         if len(top10) >= 10:
             break
 
     if not top10:
         top10 = all_flights[:10]
 
-    today_str = datetime.today().strftime("%d.%m.%Y")
+    cheapest_iata = top10[0][3] if top10 else "TPS"
+    photo_query = DESTINATIONS.get(cheapest_iata, ("", "travel beach"))[1]
+    photo_url = get_unsplash_photo(photo_query)
 
-    msg = "✈️ TOP 10 NAJLACNEJŠÍCH LETENIEK Z BRATISLAVY\n"
+    today_str = datetime.today().strftime("%d.%m.%Y")
+    motivacia = random.choice(MOTIVACIE)
+
+    msg = motivacia + "\n\n"
+    msg += "✈️ TOP 10 NAJLACNEJŠÍCH LETENIEK Z BRATISLAVY\n"
     msg += "📅 " + today_str + " | Najbližších 14 dní\n\n"
 
-    for i, (date, price, dest) in enumerate(top10, 1):
+    for i, (date, price, name, iata) in enumerate(top10, 1):
         emoji = "🟢" if price < 20 else "🟡" if price < 40 else "🔴"
-        msg += str(i) + ". " + emoji + " " + date + " → " + dest + " — " + str(int(price)) + " €\n"
+        msg += str(i) + ". " + emoji + " " + date + " → " + name + " — " + str(int(price)) + " €\n"
 
     msg += "\n👉 Rezervuj tu: " + KIWI_LINK
     msg += "\n\n#letenky #cestovanie #výlety #lacnéletenky #Bratislava #reklama"
 
-    post_to_facebook(msg)
+    post_to_facebook_with_photo(FB_PAGE_ID, msg, photo_url, FB_PAGE_TOKEN)
+    post_to_facebook_with_photo(FB_GROUP_ID, msg, photo_url, FB_PAGE_TOKEN)
     print("Hotovo!")
 
 if __name__ == "__main__":
