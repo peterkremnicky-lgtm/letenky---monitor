@@ -176,7 +176,7 @@ def main():
 
     post_id = post_to_facebook(FB_PAGE_ID, msg, photo_url, FB_PAGE_TOKEN)
 
-    fb_link = "https://www.facebook.com/permalink.php?story_fbid=" + post_id.split("_")[-1] + "&id=" + FB_PAGE_ID if post_id else "https://www.facebook.com/Kedykam"
+    fb_link = "https://www.facebook.com/permalink.php?story_fbid=" + post_id.split("_")[-1] + "&id=" + FB_PAGE_ID if post_id else "https://www.facebook.com/profile.php?id=100095223710256"
 
     notif = "✅ <b>Post zverejnený na Kedykam!</b>\n\n"
     notif += "📱 Zdieľaj do skupiny ako stránka Kedykam:\n"
