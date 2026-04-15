@@ -156,9 +156,9 @@ def main():
     if not top10:
         top10 = all_flights[:10]
 
-   random_dest = random.choice(top10) if top10 else ("", 0, "", "TPS")
-photo_query = DESTINATIONS.get(random_dest[3], ("", "travel beach"))[1]
-photo_url = get_unsplash_photo(photo_query)
+    random_dest = random.choice(top10) if top10 else ("", 0, "", "TPS")
+    photo_query = DESTINATIONS.get(random_dest[3], ("", "travel beach"))[1]
+    photo_url = get_unsplash_photo(photo_query)
 
     today_str = datetime.today().strftime("%d.%m.%Y")
     motivacia = random.choice(MOTIVACIE)
